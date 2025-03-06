@@ -1,14 +1,11 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const host = @import("../hostio.zig");
 const Allocator = std.mem.Allocator;
 const mem = std.mem;
 const assert = std.debug.assert;
 const wasm = std.wasm;
 const math = std.math;
-
-// Instead of the built-in, @wasmMemoryGrow function, Stylus programs need to grow their memory
-// via an external import called memory_grow from a group called vm_hooks.
-pub extern "vm_hooks" fn pay_for_memory_grow(len: u32) void;
 
 comptime {
     if (builtin.target.cpu.arch != .wasm32) {
@@ -173,8 +170,13 @@ fn allocBigPages(n: usize) usize {
         return top_free_ptr;
     }
 
-    pay_for_memory_grow(pow2_pages * pages_per_bigpage);
+    host.pay_for_memory_grow(pow2_pages * pages_per_bigpage);
     const addr = current_memory_addr;
     current_memory_addr = slot_size_bytes + current_memory_addr;
     return addr;
 }
+
+pub const allocator = std.mem.Allocator{
+    .ptr = undefined,
+    .vtable = &vtable,
+};
